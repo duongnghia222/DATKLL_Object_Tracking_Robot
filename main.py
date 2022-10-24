@@ -12,6 +12,13 @@ from models import hsv_contour, hough_circle
 # upper_red = np.array([15,255,255]) # my ball color
 lower_red = np.array([0, 100, 100])  # recommend red
 upper_red = np.array([7, 255, 255])  # recommend red
+# #green color
+# lower_green = np.array([40,70,80])
+# upper_green = np.array([70,255,255])
+#
+# #blue color
+# lower_blue = np.array([90,60,0])
+# upper_blue = np.array([121,255,255])
 area_threshold = 100  # arg for an accurate detection
 r_threshold = 30
 
