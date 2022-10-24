@@ -1,0 +1,8 @@
+https://www.youtube.com/watch?v=w_krOCBk1DE
+https://www.youtube.com/watch?v=mfiRJ1qgToc
+OpenCV - Object Tracking / Following Robot Using Raspberry Pi
+	https://www.youtube.com/watch?v=M8-tdnEpVJU
+DC Motor (L298) Basic + Object Oriented | Raspberry Pi Tutorials for Beginners
+	https://www.youtube.com/watch?v=Qp4wNdyC2Z0
+https://www.codersarts.com/post/determine-color-contours-and-center-using-opencv
+https://cvexplained.wordpress.com/tag/contours/
