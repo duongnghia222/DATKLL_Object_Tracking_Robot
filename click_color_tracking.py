@@ -50,7 +50,10 @@ def on_mouse_click(event, x, y, flags, frame):
         print(color_rgb)
         color_hsv = rgb2hsv(color_rgb[0], color_rgb[1], color_rgb[2])
         print(color_hsv)
-        colors.append(color_hsv)
+        if color_hsv in colors:
+            colors.remove(color_hsv)
+        else:
+            colors.append(color_hsv)
         print(colors)
 
 
@@ -122,21 +125,16 @@ if __name__ == "__main__":
         cap.set(4, IMAGE_HEIGHT)
 
         while True:
-            # Read the frames frome a camera
+            # Read the frames from a camera
             _, frame = cap.read()
             frame = cv2.GaussianBlur(frame, (3, 3), 0)
             cv2.namedWindow("frame")
-            # Or get it from a JPEG
-            # frame = cv2.imread('frame0010.jpg', 1)
-
             # Convert the image to hsv space and find range of colors
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             cv2.setMouseCallback('frame', on_mouse_click, frame)
 
-            # Uncomment this for RED tag
-            # thresh = cv2.inRange(hsv,np.array((120, 80, 80)), np.array((180, 255, 255)))
 
-            # find the color using a color threshhold
+            # find the color using a color threshold
             if colors:
                 # find max & min h, s, v
                 minh = min(c[0] for c in colors)
@@ -152,16 +150,7 @@ if __name__ == "__main__":
 
             thresh = cv2.inRange(hsv, hsv_min, hsv_max)
             thresh2 = thresh.copy()
-
-            # find contours in the threshold image
-            (major_ver, minor_ver, subminor_ver) = cv2.__version__.split('.')
-            # print(major_ver, minor_ver, subminor_ver)
-
-            # findContours() has different form for opencv2 and opencv3
-            if major_ver == "2" or major_ver == "3":
-                _, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            else:
-                contours, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            contours, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
             # finding contour with maximum area and store it as best_cnt
             max_area = 0
