@@ -14,6 +14,7 @@ def hough_circle(img):
     rows = gray.shape[0]
     circles = cv2.HoughCircles(blur2, cv2.HOUGH_GRADIENT, 1,
                                minDist=rows / 8, param1=210, param2=37, minRadius=20, maxRadius=150)
+    print(circles)
     if circles is not None:
         circles = np.uint16(np.around(circles))
         chosen = None

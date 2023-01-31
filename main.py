@@ -37,7 +37,7 @@ time.sleep(2)  # time for camera warnup
 while True:
     success, img = cap.read()
     hsv_contour(img, lower_red, upper_red, r_threshold)
-    #hough_circle(img)
+    hough_circle(img)
     cv2.imshow("Result", img)
     if cv2.waitKey(1) & 0xFF == ord('q'):  # press q to quit
         break
