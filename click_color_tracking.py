@@ -6,8 +6,8 @@ CAMERA_DEVICE_ID = 0
 IMAGE_WIDTH = 320
 IMAGE_HEIGHT = 240
 
-hsv_min = np.array((50, 80, 80))
-hsv_max = np.array((120, 255, 255))
+hsv_min = np.array((0, 0, 0))
+hsv_max = np.array((0, 0, 0))
 
 colors = []
 last_circle = (0, 0)
@@ -157,6 +157,7 @@ if __name__ == "__main__":
                 hsv_min = np.array((minh, mins, minv))
                 hsv_max = np.array((maxh, maxs, maxv))
 
+
             thresh = cv2.inRange(hsv, hsv_min, hsv_max)
             thresh2 = thresh.copy()
             contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -193,17 +194,19 @@ if __name__ == "__main__":
                     if contours_found[i]['vote'] > most_voted_cnt:
                         most_voted_cnt = contours_found[i]['vote']
                         object_cnt = contours_found[i]
-            prev_tracking_object = tracking_object
-            tracking_object = object_cnt['center']
+            if object_cnt is not None:
+                prev_tracking_object = tracking_object
+                tracking_object = object_cnt['center']
 
             # finding centroids of best_cnt and draw a circle there
             if object_cnt is not None:
                 # print('Area:', area)
                 cx, cy = object_cnt['center']
                 x, y, w, h = object_cnt['bbox']
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-                cv2.circle(frame, prev_tracking_object, 5, (0, 255, 255), -1)
-                cv2.circle(frame, tracking_object, 5, 255, -1)
+                if contours_found:
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                    cv2.circle(frame, prev_tracking_object, 5, (0, 255, 255), -1)
+                    cv2.circle(frame, tracking_object, 5, 255, -1)
                 # print("Central pos: (%d, %d)" % (cx,cy))
             else:
                 # print("[Warning]Tag lost...")
