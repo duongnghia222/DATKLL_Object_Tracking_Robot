@@ -10,9 +10,9 @@ hsv_min = np.array((50, 80, 80))
 hsv_max = np.array((120, 255, 255))
 
 colors = []
-last_circle = None
-prev_tracking_object = None
-tracking_object = None
+last_circle = (0, 0)
+prev_tracking_object = (0, 0)
+tracking_object = (0, 0)
 object_cnt = None
 
 
@@ -161,54 +161,42 @@ if __name__ == "__main__":
             contours_found = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                if area > 700:
+                print(area)
+                if area > 200:
                     peri = cv2.arcLength(cnt, True)
                     approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
                     x, y, w, h = cv2.boundingRect(approx)
                     cx, cy = x + (w // 2), y + (h // 2)
-                    contours_found.append({"cnt": cnt, "area": area, "bbox": [x, y, w, h], "center": [cx, cy]})
+                    contours_found.append(
+                        {"cnt": cnt, "area": area, "bbox": [x, y, w, h], "center": [cx, cy], "vote": 0})
             contours_found = sorted(contours_found, key=lambda x: x["area"], reverse=True)
-            if contours_found:
-                object_cnt = contours_found[0]['cnt']
-            for i in range(3):  # find 3 biggest cnt
+            for i in range(3):  # find most voted biggest cnt
                 if i < len(contours_found):
-                    if dist(contours_found[i]['center'][0], contours_found[i]['center'][1], last_circle[0], \
-                            last_circle[1]) < 100 or dist(contours_found[i]['center'][0],
-                                                          contours_found[i]['center'][1], prev_tracking_object[0], \
-                                                          prev_tracking_object[1]) < 7000:
+                    if dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
+                            last_circle[0], last_circle[1]) < 100:
+                        contours_found[i]['vote'] += 100
+                        break
+                    elif dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
+                              prev_tracking_object[0], prev_tracking_object[1]) < 7000:
+                        contours_found[i]['vote'] += 3
+                    else:
+                        contours_found[i]['vote'] += (2-i)
+            most_voted_cnt = -999
+            for i in range(3):
+                if i < len(contours_found):
+                    if contours_found[i]['vote'] > most_voted_cnt:
+                        most_voted_cnt = contours_found[i]['vote']
+                        object_cnt = contours_found[i]
                         prev_tracking_object = (tracking_object[0], tracking_object[1])
                         tracking_object = (contours_found[i]['center'][0], contours_found[i]['center'][1],
                                            contours_found[i]['area'])
-                        object_cnt = contours_found[i]['cnt']
-                        break
 
-                    # if init_object_center:
-                    #     M = cv2.moments(cnt)
-                    #     cx, cy = int(M['m10'] / M['m00']), int(M['m01'] / M['m00'])
-                    #     if prev_tracking_object is None:
-                    #         prev_tracking_object = init_object_center
-                    #         tracking_object = (init_object_center[0], init_object_center[1], 0)
-                    #     print('cx cy prev')
-                    #     print(cx, cy, prev_tracking_object)
-                    #     print(dist(cx, cy, prev_tracking_object[0], prev_tracking_object[1]))
-                    #     print('cx cy last circle')
-                    #     print(cx, cy, last_circle)
-                    #     print(dist(cx, cy, last_circle[0], last_circle[1]))
-                    #     if dist(cx, cy, prev_tracking_object[0], prev_tracking_object[1]) < 9000 or \
-                    #             dist(cx, cy, last_circle[0], last_circle[1]) < 100:
-                    #         prev_tracking_object = (tracking_object[0], tracking_object[1])
-                    #         tracking_object = (cx, cy, area)
-                    #         object_cnt = cnt
-                    #         max_area = area
 
             # finding centroids of best_cnt and draw a circle there
             if object_cnt is not None:
                 # print('Area:', area)
-                cx, cy = tracking_object[0], tracking_object[1]
-
-                peri = cv2.arcLength(object_cnt, True)
-                approx = cv2.approxPolyDP(object_cnt, 0.02 * peri, True)
-                x, y, w, h = cv2.boundingRect(approx)
+                cx, cy = object_cnt['center']
+                x, y, w, h = object_cnt['bbox']
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
                 cv2.circle(frame, prev_tracking_object, 5, (0, 255, 255), -1)
                 cv2.circle(frame, (cx, cy), 5, 255, -1)
