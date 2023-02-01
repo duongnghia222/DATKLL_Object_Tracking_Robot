@@ -31,7 +31,6 @@ def on_mouse_click(event, x, y, flags, frame):
             colors.remove(color_hsv)
         else:
             colors.append(color_hsv)
-        print(colors)
 
 
 # R, G, B values are [0, 255].
@@ -96,6 +95,15 @@ def dist(x1, y1, x2, y2):
     return (x1 - x2) ** 2 + (y1 - y2) ** 2
 
 
+# =========== my vars ========
+middle_x = IMAGE_WIDTH // 2
+scale = 0.3
+middle_diff = 50
+left_bound = middle_x - middle_diff
+right_bound = middle_x + middle_diff
+area_threshold = 5000
+# ===========================
+
 if __name__ == "__main__":
     try:
         # create video capture
@@ -142,7 +150,6 @@ if __name__ == "__main__":
                         prev_tracking_object = (chosen[0], chosen[1])
                     last_circle = chosen
                     prev_circle = chosen
-            # print('last found circle', last_circle)
             # find the color using a color threshold
             if colors:
                 # find max & min h, s, v
@@ -174,13 +181,10 @@ if __name__ == "__main__":
                     contours_found.append(
                         {"cnt": cnt, "area": area, "bbox": [x, y, w, h], "center": [cx, cy], "vote": 0})
             contours_found = sorted(contours_found, key=lambda x: x["area"], reverse=True)
-            print('conto found', len(contours_found))
             for i in range(3):  # find most voted biggest cnt
                 if i < len(contours_found):
-                    print('dist', dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
-                                       prev_tracking_object[0], prev_tracking_object[1]))
                     if circle_updated and dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
-                                               last_circle[0], last_circle[1]) < 100:
+                                               last_circle[0], last_circle[1]) < 20:
                         contours_found[i]['vote'] += 100
                         break
                     elif dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
@@ -190,7 +194,6 @@ if __name__ == "__main__":
             most_voted_cnt = -999
             for i in range(3):
                 if i < len(contours_found):
-                    print('contour', i, 'vote', contours_found[i]['vote'])
                     if contours_found[i]['vote'] > most_voted_cnt:
                         most_voted_cnt = contours_found[i]['vote']
                         object_cnt = contours_found[i]
@@ -208,12 +211,32 @@ if __name__ == "__main__":
                     cv2.circle(frame, prev_tracking_object, 5, (0, 255, 255), -1)
                     cv2.circle(frame, tracking_object, 5, 255, -1)
                 # print("Central pos: (%d, %d)" % (cx,cy))
+                diff = abs(middle_x - cx)
+                turn_speed = diff * scale
+                middle_diff = int(object_cnt['area'] * 0.02)
+                if middle_diff > 160:
+                    middle_diff = 160
+                left_bound = middle_x - middle_diff
+                right_bound = middle_x + middle_diff
+                if right_bound < cx:
+                    print("turn_right")
+                elif left_bound > cx:
+                    print('turn left')
+                else:
+                    if object_cnt['area'] < area_threshold:
+                        print('forward')
+                    if object_cnt['area'] > area_threshold + 5000:
+                        print('backward ')
+                    elif area_threshold <= object_cnt['area'] <= area_threshold + 5000:
+                        print('stop')
             else:
-                # print("[Warning]Tag lost...")
-                pass
+                print('stop')
 
             # Show the original and processed image
             # res = cv2.bitwise_and(frame, frame, mask=thresh2)
+            cv2.line(frame, (middle_x, 540), (middle_x, 0), (255, 0, 0), thickness=1)
+            cv2.line(frame, (left_bound, 540), (left_bound, 0), (0, 255, 0), thickness=2)
+            cv2.line(frame, (right_bound, 540), (right_bound, 0), (0, 255, 0), thickness=2)
             cv2.imshow('frame', frame)
             cv2.imshow('thresh', thresh2)
 
