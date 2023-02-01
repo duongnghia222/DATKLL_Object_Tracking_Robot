@@ -9,7 +9,6 @@ def hough_circle(img):
 
     prev_circle = None
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (17, 17), 0)
     blur2 = cv2.medianBlur(gray, 5)
     rows = gray.shape[0]
     circles = cv2.HoughCircles(blur2, cv2.HOUGH_GRADIENT, 1,
