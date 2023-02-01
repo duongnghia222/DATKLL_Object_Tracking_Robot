@@ -106,7 +106,7 @@ if __name__ == "__main__":
         cap.set(4, IMAGE_HEIGHT)
         while True:
             # Read the frames from a camera
-
+            circle_updated = False
             _, frame = cap.read()
 
             c_frame = frame.copy()
@@ -136,6 +136,10 @@ if __name__ == "__main__":
                             chosen = i
                     cv2.circle(frame, (chosen[0], chosen[1]), 1, (0, 100, 100), 3)
                     cv2.circle(frame, (chosen[0], chosen[1]), chosen[2], (0, 0, 255), 3)
+                    circle_updated = True
+                    if prev_tracking_object is None and tracking_object is None:
+                        tracking_object = (chosen[0], chosen[1])
+                        prev_tracking_object = (chosen[0], chosen[1])
                     last_circle = chosen
                     prev_circle = chosen
             # print('last found circle', last_circle)
@@ -161,7 +165,6 @@ if __name__ == "__main__":
             contours_found = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                print(area)
                 if area > 200:
                     peri = cv2.arcLength(cnt, True)
                     approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
@@ -170,27 +173,28 @@ if __name__ == "__main__":
                     contours_found.append(
                         {"cnt": cnt, "area": area, "bbox": [x, y, w, h], "center": [cx, cy], "vote": 0})
             contours_found = sorted(contours_found, key=lambda x: x["area"], reverse=True)
+            print('conto found', len(contours_found))
             for i in range(3):  # find most voted biggest cnt
                 if i < len(contours_found):
-                    if dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
-                            last_circle[0], last_circle[1]) < 100:
+                    print('dist', dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
+                                       prev_tracking_object[0], prev_tracking_object[1]))
+                    if circle_updated and dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
+                                               last_circle[0], last_circle[1]) < 100:
                         contours_found[i]['vote'] += 100
                         break
                     elif dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
-                              prev_tracking_object[0], prev_tracking_object[1]) < 7000:
-                        contours_found[i]['vote'] += 3
-                    else:
-                        contours_found[i]['vote'] += (2-i)
+                              prev_tracking_object[0], prev_tracking_object[1]) < 700:
+                        contours_found[i]['vote'] += 5
+                    contours_found[i]['vote'] += (2 - i)
             most_voted_cnt = -999
             for i in range(3):
                 if i < len(contours_found):
+                    print('contour', i, 'vote', contours_found[i]['vote'])
                     if contours_found[i]['vote'] > most_voted_cnt:
                         most_voted_cnt = contours_found[i]['vote']
                         object_cnt = contours_found[i]
-                        prev_tracking_object = (tracking_object[0], tracking_object[1])
-                        tracking_object = (contours_found[i]['center'][0], contours_found[i]['center'][1],
-                                           contours_found[i]['area'])
-
+            prev_tracking_object = tracking_object
+            tracking_object = object_cnt['center']
 
             # finding centroids of best_cnt and draw a circle there
             if object_cnt is not None:
@@ -199,7 +203,7 @@ if __name__ == "__main__":
                 x, y, w, h = object_cnt['bbox']
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
                 cv2.circle(frame, prev_tracking_object, 5, (0, 255, 255), -1)
-                cv2.circle(frame, (cx, cy), 5, 255, -1)
+                cv2.circle(frame, tracking_object, 5, 255, -1)
                 # print("Central pos: (%d, %d)" % (cx,cy))
             else:
                 # print("[Warning]Tag lost...")
