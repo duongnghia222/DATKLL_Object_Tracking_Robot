@@ -358,9 +358,12 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
                         stop()
             else:
                 stop()
-                
 
-
+            cv2.line(frame, (middle_x, 540), (middle_x, 0), (255, 0, 0), thickness=1)
+            cv2.line(frame, (left_bound, 540), (left_bound, 0), (0, 255, 0), thickness=2)
+            cv2.line(frame, (right_bound, 540), (right_bound, 0), (0, 255, 0), thickness=2)
+            cv2.imshow('frame', frame)
+            cv2.imshow('thresh', thresh2)
             key = cv2.waitKey(1) & 0xFF
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
