@@ -16,7 +16,7 @@ enA = 6
 enB = 26
 servoPin = 13
 
-init_default_speed = 10
+init_default_speed = 30
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
@@ -82,15 +82,34 @@ def turn_left(speed):
     GPIO.output(in4,GPIO.LOW)
     
     
-def moveServo():
-    duty = 2
-    while duty <= 12:
-        servo.ChangeDutyCycle(duty)
-        time.sleep(0.3)
-        servo.ChangeDutyCycle(0)
-        time.sleep(0.7)
-        duty = duty + 1
-        
+
+init_duty = 2
+def servo_turn_left():
+    global init_duty
+    
+    init_duty += 2
+    if init_duty > 12:
+        init_duty = 12
+    servo.ChangeDutyCycle(init_duty)
+    time.sleep(0.3)
+    servo.ChangeDutyCycle(0)
+    time.sleep(0.7)
+
+def servo_turn_right():
+    global init_duty
+    
+    init_duty -= 2
+    if init_duty < 2:
+        init_duty = 2
+    servo.ChangeDutyCycle(init_duty)
+    time.sleep(0.3)
+    servo.ChangeDutyCycle(0)
+    time.sleep(0.7)
+
+def setAngle():
+    servo.ChangeDutyCycle(2+(90/18))
+    time.sleep(0.5)
+    servo.ChangeDutyCycle(0)  
 
 
 
@@ -111,96 +130,121 @@ middle_diff = 50
 left_bound = middle_x - middle_diff
 right_bound = middle_x + middle_diff
 area_threshold = 23000
+# ===========================
+keyboard_control = False
 
 
 # ===========================
 myColorFinder = ColorFinder(False)  # change this to True to get the color you want
 hsvVals = {'hmin': 163, 'smin': 0, 'vmin': 0, 'hmax': 179, 'smax': 255, 'vmax': 255}
+#hsvVals = {'hmin': 28, 'smin': 75, 'vmin': 0, 'hmax': 71, 'smax': 254, 'vmax': 255}
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     try:
-        img = frame.array
-        imgColor, mask = myColorFinder.update(img, hsvVals)
-        imgContour, contours = cvzone.findContours(img,mask, minArea= 2000)
-        if contours:
-            data = contours[0]['center'][0],\
-                    contours[0]['center'][1],\
-                    int(contours[0]['area'])
-#             print(data)
-#             print(right_bound, left_bound)
-            
-            diff = abs(middle_x - data[0])
-            turn_speed = diff*scale
-            middle_diff = int(data[2]*0.02)
-            if(middle_diff > 160):
-                middle_diff = 160
-            print('middle', middle_diff)
-            left_bound = middle_x - middle_diff
-            right_bound = middle_x + middle_diff
-            if right_bound < data[0]:
-                turn_right(30)
-            elif left_bound > data[0]:
-                turn_left(30)
-            else:
-                if data[2] < area_threshold:
-                    forward(init_default_speed)
-                if data[2] > area_threshold + 5000:
-                    backward(init_default_speed)
-                elif area_threshold <= data[2] <= area_threshold + 5000:
-                    stop()
+        if keyboard_control:
+            cv2.imshow("Result", frame.array)
+            key = cv2.waitKey(1) & 0xFF
+            # clear the stream in preparation for the next frame
+            rawCapture.truncate(0)
+            if key == ord("w"):
+                forward(init_default_speed)
+            if key == ord("a"):
+                turn_left(17)
+            if key == ord("d"):
+                turn_right(17)
+            if key == ord("s"):
+                backward(int(init_default_speed*0.8))
+            if key == ord("z"):
+                servo_turn_left()
+            if key == ord("c"):
+                servo_turn_right()
+            if key == ord("v"):
+                setAngle()
+            if key == ord("x"):
+                stop()
+            if key == ord("k"):
+                stop()
+                keyboard_control = not keyboard_control
+                print("****** tracking car mode  *******")
         else:
-            stop()
+            img = frame.array
+            imgColor, mask = myColorFinder.update(img, hsvVals)
+            imgContour, contours = cvzone.findContours(img,mask, minArea= 2000)
+            if contours:
+                data = contours[0]['center'][0],\
+                        contours[0]['center'][1],\
+                        int(contours[0]['area'])
+    #             print(data)
+    #             print(right_bound, left_bound)
+                
+                diff = abs(middle_x - data[0])
+                turn_speed = diff*scale
+                middle_diff = int(data[2]*0.02)
+                if(middle_diff > 160):
+                    middle_diff = 160
+                print('middle', middle_diff)
+                left_bound = middle_x - middle_diff
+                right_bound = middle_x + middle_diff
+                if right_bound < data[0]:
+                    turn_right(init_default_speed)
+                elif left_bound > data[0]:
+                    turn_left(init_default_speed)
+                else:
+                    if data[2] < area_threshold:
+                        forward(init_default_speed)
+                    if data[2] > area_threshold + 8000:
+                        backward(init_default_speed)
+                    elif area_threshold <= data[2] <= area_threshold + 5000:
+                        stop()
+            else:
+                stop()
+                
+            cv2.line(imgContour, (middle_x,540),  (middle_x,0) ,(255,0,0), thickness = 1)
+            cv2.line(imgContour, (left_bound, 540), (left_bound, 0), (0, 255, 0), thickness=2)
+            cv2.line(imgContour, (right_bound, 540), (right_bound, 0), (0, 255, 0), thickness=2)
+            imgStack = cvzone.stackImages([img, imgColor, mask, imgContour], 2, 0.5)
+            cv2.imshow("Result", imgStack)
+            #cv2.imshow("Result", imgContour)
+            #cv2.imshow("Frame", img)
+            key = cv2.waitKey(1) & 0xFF
+            # clear the stream in preparation for the next frame
+            rawCapture.truncate(0)
+            # if the `q` key was pressed, break from the loop
+            if key == ord("q"):
+                break
+            if key == ord("i"):
+                Thread(target=servo_turn_left).start()
+            if key == ord("p"):
+                Thread(target=servo_turn_right).start()
+            if key == ord("o"):
+                Thread(target=setAngle).start()    
             
-        cv2.line(imgContour, (middle_x,540),  (middle_x,0) ,(255,0,0), thickness = 1)
-        cv2.line(imgContour, (left_bound, 540), (left_bound, 0), (0, 255, 0), thickness=2)
-        cv2.line(imgContour, (right_bound, 540), (right_bound, 0), (0, 255, 0), thickness=2)
-        imgStack = cvzone.stackImages([img, imgColor, mask, imgContour], 2, 0.5)
-        cv2.imshow("Result", imgStack)
-        #cv2.imshow("Result", imgContour)
-        #cv2.imshow("Frame", img)
-        key = cv2.waitKey(1) & 0xFF
-        # clear the stream in preparation for the next frame
-        rawCapture.truncate(0)
-        # if the `q` key was pressed, break from the loop
-        if key == ord("q"):
-            break
-        if key == ord("p"):
-            Thread(target=moveServo).start()
-        if key == ord("s"):
-            stop()
-        if key == ord("a"):
-            turn_left(init_default_speed)
-        if key == ord("d"):
-            turn_right(init_default_speed)
-        if key == ord("z"):
-            backward(init_default_speed)
-        if key == ord("g"):
-            if hsvVals['hmin'] < 179:
-                hsvVals['hmin']+=2
-                print('hmin', hsvVals['hmin'])
-        if key == ord("b"):
-            if hsvVals['hmin'] > 0:
-                hsvVals['hmin']-=2
-                print('hmin', hsvVals['hmin'])
-        if key == ord("h"):
-            if hsvVals['smin'] < 200:
-                hsvVals['smin']+=2
-                print('smin', hsvVals['smin'])
-        if key == ord("n"):
-            if hsvVals['smin'] > 0:
-                hsvVals['smin']-=2
-                print('smin', hsvVals['smin'])
-        if key == ord("j"):
-            if hsvVals['vmin'] < 200:
-                hsvVals['vmin']+=2
-                print('vmin', hsvVals['vmin'])
-        if key == ord("m"):
-            if hsvVals['vmin'] > 0:
-                hsvVals['vmin']-=2
-                print('vmin', hsvVals['vmin'])
+            if key == ord("x"):
+                stop()
+            if key == ord("a"):
+                turn_left(init_default_speed)
+            if key == ord("d"):
+                turn_right(init_default_speed)
+            if key == ord("s"):
+                backward(init_default_speed)
+            if key == ord("w"):
+                forward(init_default_speed)
+            if key == ord("k"):
+                stop()
+                keyboard_control = not keyboard_control
+                print("****** control car by keyboard  *******")
+        if key == ord("r"):
+                if init_default_speed <= 94:
+                    init_default_speed += 5
+                    print("speed = ", init_default_speed)
+        if key == ord("f"):
+            if init_default_speed >= 6:
+                init_default_speed -= 5
+                print("speed = ", init_default_speed)
     except:
         GPIO.cleanup()
         stop()
         
+
 
 
 
