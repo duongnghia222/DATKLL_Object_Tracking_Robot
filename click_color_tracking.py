@@ -5,7 +5,7 @@ import math
 CAMERA_DEVICE_ID = 0
 IMAGE_WIDTH = 320
 IMAGE_HEIGHT = 240
-screen_center_point = (IMAGE_WIDTH//2, IMAGE_HEIGHT//2)
+screen_center_point = (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2)
 
 hsv_min = np.array((0, 0, 0))
 hsv_max = np.array((0, 0, 0))
@@ -15,6 +15,7 @@ last_circle = (0, 0)
 object_cnt = None
 tracking_object = None
 circle_updated = False
+
 
 def on_mouse_click(event, x, y, flags, frame):
     global colors
@@ -177,14 +178,13 @@ if __name__ == "__main__":
                     contours_found.append(
                         {"cnt": cnt, "area": area, "bbox": [x, y, w, h], "center": [cx, cy], "vote": 0})
             contours_found = sorted(contours_found, key=lambda x: x["area"], reverse=True)
-            print(len((contours_found)))
             for i in range(3):  # find most voted biggest cnt
                 if i < len(contours_found):
                     if circle_updated and dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
                                                last_circle[0], last_circle[1]) < 200:
                         contours_found[i]['vote'] += 200
-                    if dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
-                            tracking_object[0], tracking_object[1]) < 5000:
+                    if tracking_object and dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
+                                                tracking_object[0], tracking_object[1]) < 5000:
                         contours_found[i]['vote'] += 75
                     if dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
                             screen_center_point[0], screen_center_point[1]) < 2000:
@@ -210,26 +210,26 @@ if __name__ == "__main__":
                 cv2.circle(frame, tracking_object, 5, 255, -1)
                 # print("Central pos: (%d, %d)" % (cx,cy))
 
-            #     diff = abs(middle_x - cx)
-            #     turn_speed = diff * scale
-            #     middle_diff = int(object_cnt['area'] * 0.02)
-            #     if middle_diff > 160:
-            #         middle_diff = 160
-            #     left_bound = middle_x - middle_diff
-            #     right_bound = middle_x + middle_diff
-            #     if right_bound < cx:
-            #         print("turn_right")
-            #     elif left_bound > cx:
-            #         print('turn left')
-            #     else:
-            #         if object_cnt['area'] < area_threshold:
-            #             print('forward')
-            #         if object_cnt['area'] > area_threshold + 5000:
-            #             print('backward ')
-            #         elif area_threshold <= object_cnt['area'] <= area_threshold + 5000:
-            #             print('stop')
-            # else:
-            #     print('stop')
+                diff = abs(middle_x - cx)
+                turn_speed = diff * scale
+                middle_diff = int(object_cnt['area'] * 0.02)
+                if middle_diff > 160:
+                    middle_diff = 160
+                left_bound = middle_x - middle_diff
+                right_bound = middle_x + middle_diff
+                if right_bound < cx:
+                    print("turn_right")
+                elif left_bound > cx:
+                    print('turn left')
+                else:
+                    if object_cnt['area'] < area_threshold:
+                        print('forward')
+                    if object_cnt['area'] > area_threshold + 5000:
+                        print('backward ')
+                    elif area_threshold <= object_cnt['area'] <= area_threshold + 5000:
+                        print('stop')
+            else:
+                print('stop')
 
             # Show the original and processed image
             # res = cv2.bitwise_and(frame, frame, mask=thresh2)
