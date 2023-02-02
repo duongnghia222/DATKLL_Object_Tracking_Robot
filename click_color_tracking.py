@@ -5,6 +5,7 @@ import math
 CAMERA_DEVICE_ID = 0
 IMAGE_WIDTH = 320
 IMAGE_HEIGHT = 240
+screen_center_point = (IMAGE_WIDTH//2, IMAGE_HEIGHT//2)
 
 hsv_min = np.array((0, 0, 0))
 hsv_max = np.array((0, 0, 0))
@@ -13,7 +14,7 @@ colors = []
 last_circle = (0, 0)
 object_cnt = None
 tracking_object = None
-
+circle_updated = False
 
 def on_mouse_click(event, x, y, flags, frame):
     global colors
@@ -25,10 +26,7 @@ def on_mouse_click(event, x, y, flags, frame):
         color_bgr = frame[y, x]
         color_rgb = tuple(reversed(color_bgr))
         color_hsv = rgb2hsv(color_rgb[0], color_rgb[1], color_rgb[2])
-        if color_hsv in colors:
-            colors.remove(color_hsv)
-        else:
-            colors.append(color_hsv)
+        colors.append(color_hsv)
 
 
 # R, G, B values are [0, 255].
@@ -112,8 +110,9 @@ if __name__ == "__main__":
         cap.set(4, IMAGE_HEIGHT)
         while True:
             # Read the frames from a camera
-            circle_updated = False
+
             _, frame = cap.read()
+            frame = cv2.flip(frame, 1)
 
             c_frame = frame.copy()
             c_frame = cv2.medianBlur(c_frame, 5)
@@ -140,13 +139,14 @@ if __name__ == "__main__":
                                                                                               prev_circle[0],
                                                                                               prev_circle[1]):
                             chosen = i
-                    cv2.circle(frame, (chosen[0], chosen[1]), 1, (0, 100, 100), 3)
-                    cv2.circle(frame, (chosen[0], chosen[1]), chosen[2], (0, 0, 255), 3)
-                    circle_updated = True
-                    if tracking_object is None:
-                        tracking_object = (chosen[0], chosen[1])
-                    last_circle = chosen
                     prev_circle = chosen
+                cv2.circle(frame, (chosen[0], chosen[1]), 1, (0, 100, 100), 3)
+                cv2.circle(frame, (chosen[0], chosen[1]), chosen[2], (0, 0, 255), 3)
+                circle_updated = True
+                if tracking_object is None:
+                    tracking_object = (chosen[0], chosen[1])
+                last_circle = (chosen[0], chosen[1])
+
             # find the color using a color threshold
             if colors:
                 # find max & min h, s, v
@@ -177,15 +177,18 @@ if __name__ == "__main__":
                     contours_found.append(
                         {"cnt": cnt, "area": area, "bbox": [x, y, w, h], "center": [cx, cy], "vote": 0})
             contours_found = sorted(contours_found, key=lambda x: x["area"], reverse=True)
+            print(len((contours_found)))
             for i in range(3):  # find most voted biggest cnt
                 if i < len(contours_found):
                     if circle_updated and dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
                                                last_circle[0], last_circle[1]) < 200:
-                        contours_found[i]['vote'] += 100
-                        break
+                        contours_found[i]['vote'] += 200
                     if dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
                             tracking_object[0], tracking_object[1]) < 5000:
-                        contours_found[i]['vote'] += 5
+                        contours_found[i]['vote'] += 75
+                    if dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
+                            screen_center_point[0], screen_center_point[1]) < 2000:
+                        contours_found[i]['vote'] += 25
                     contours_found[i]['vote'] += (2 - i)
             most_voted_cnt = -999
             for i in range(3):
@@ -194,7 +197,7 @@ if __name__ == "__main__":
                         most_voted_cnt = contours_found[i]['vote']
                         object_cnt = contours_found[i]
             if object_cnt is not None:
-                print(object_cnt['vote'])
+                # print(object_cnt['vote'])
                 cv2.circle(frame, tracking_object, 5, (0, 255, 255), -1)
                 tracking_object = object_cnt['center']
 
@@ -207,26 +210,26 @@ if __name__ == "__main__":
                 cv2.circle(frame, tracking_object, 5, 255, -1)
                 # print("Central pos: (%d, %d)" % (cx,cy))
 
-                diff = abs(middle_x - cx)
-                turn_speed = diff * scale
-                middle_diff = int(object_cnt['area'] * 0.02)
-                if middle_diff > 160:
-                    middle_diff = 160
-                left_bound = middle_x - middle_diff
-                right_bound = middle_x + middle_diff
-                if right_bound < cx:
-                    print("turn_right")
-                elif left_bound > cx:
-                    print('turn left')
-                else:
-                    if object_cnt['area'] < area_threshold:
-                        print('forward')
-                    if object_cnt['area'] > area_threshold + 5000:
-                        print('backward ')
-                    elif area_threshold <= object_cnt['area'] <= area_threshold + 5000:
-                        print('stop')
-            else:
-                print('stop')
+            #     diff = abs(middle_x - cx)
+            #     turn_speed = diff * scale
+            #     middle_diff = int(object_cnt['area'] * 0.02)
+            #     if middle_diff > 160:
+            #         middle_diff = 160
+            #     left_bound = middle_x - middle_diff
+            #     right_bound = middle_x + middle_diff
+            #     if right_bound < cx:
+            #         print("turn_right")
+            #     elif left_bound > cx:
+            #         print('turn left')
+            #     else:
+            #         if object_cnt['area'] < area_threshold:
+            #             print('forward')
+            #         if object_cnt['area'] > area_threshold + 5000:
+            #             print('backward ')
+            #         elif area_threshold <= object_cnt['area'] <= area_threshold + 5000:
+            #             print('stop')
+            # else:
+            #     print('stop')
 
             # Show the original and processed image
             # res = cv2.bitwise_and(frame, frame, mask=thresh2)
@@ -242,6 +245,7 @@ if __name__ == "__main__":
             if cv2.waitKey(1) & 0xFF == ord('r'):  # press r to reset color
                 colors = []
                 print('reset color')
+            circle_updated = False
     finally:
         # Clean up and exit the program
         cv2.destroyAllWindows()
