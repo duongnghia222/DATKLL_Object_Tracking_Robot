@@ -11,9 +11,8 @@ hsv_max = np.array((0, 0, 0))
 
 colors = []
 last_circle = (0, 0)
-prev_tracking_object = (0, 0)
-tracking_object = (0, 0)
 object_cnt = None
+tracking_object = None
 
 
 def on_mouse_click(event, x, y, flags, frame):
@@ -21,9 +20,8 @@ def on_mouse_click(event, x, y, flags, frame):
     global prev_tracking_object
     global tracking_object
     if event == cv2.EVENT_LBUTTONUP:
-        if prev_tracking_object is None and tracking_object is None:
+        if tracking_object is None:
             tracking_object = (x, y)
-            prev_tracking_object = (x, y)
         color_bgr = frame[y, x]
         color_rgb = tuple(reversed(color_bgr))
         color_hsv = rgb2hsv(color_rgb[0], color_rgb[1], color_rgb[2])
@@ -145,9 +143,8 @@ if __name__ == "__main__":
                     cv2.circle(frame, (chosen[0], chosen[1]), 1, (0, 100, 100), 3)
                     cv2.circle(frame, (chosen[0], chosen[1]), chosen[2], (0, 0, 255), 3)
                     circle_updated = True
-                    if prev_tracking_object is None and tracking_object is None:
+                    if tracking_object is None:
                         tracking_object = (chosen[0], chosen[1])
-                        prev_tracking_object = (chosen[0], chosen[1])
                     last_circle = chosen
                     prev_circle = chosen
             # find the color using a color threshold
@@ -163,7 +160,6 @@ if __name__ == "__main__":
                 # print("New HSV threshold: ", (minh, mins, minv), (maxh, maxs, maxv))
                 hsv_min = np.array((minh, mins, minv))
                 hsv_max = np.array((maxh, maxs, maxv))
-
 
             thresh = cv2.inRange(hsv, hsv_min, hsv_max)
             thresh2 = thresh.copy()
@@ -184,11 +180,11 @@ if __name__ == "__main__":
             for i in range(3):  # find most voted biggest cnt
                 if i < len(contours_found):
                     if circle_updated and dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
-                                               last_circle[0], last_circle[1]) < 20:
+                                               last_circle[0], last_circle[1]) < 200:
                         contours_found[i]['vote'] += 100
                         break
-                    elif dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
-                              prev_tracking_object[0], prev_tracking_object[1]) < 700:
+                    if dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
+                            tracking_object[0], tracking_object[1]) < 5000:
                         contours_found[i]['vote'] += 5
                     contours_found[i]['vote'] += (2 - i)
             most_voted_cnt = -999
@@ -198,19 +194,19 @@ if __name__ == "__main__":
                         most_voted_cnt = contours_found[i]['vote']
                         object_cnt = contours_found[i]
             if object_cnt is not None:
-                prev_tracking_object = tracking_object
+                print(object_cnt['vote'])
+                cv2.circle(frame, tracking_object, 5, (0, 255, 255), -1)
                 tracking_object = object_cnt['center']
 
             # finding centroids of best_cnt and draw a circle there
-            if object_cnt is not None:
+            if contours_found:
                 # print('Area:', area)
                 cx, cy = object_cnt['center']
                 x, y, w, h = object_cnt['bbox']
-                if contours_found:
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-                    cv2.circle(frame, prev_tracking_object, 5, (0, 255, 255), -1)
-                    cv2.circle(frame, tracking_object, 5, 255, -1)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                cv2.circle(frame, tracking_object, 5, 255, -1)
                 # print("Central pos: (%d, %d)" % (cx,cy))
+
                 diff = abs(middle_x - cx)
                 turn_speed = diff * scale
                 middle_diff = int(object_cnt['area'] * 0.02)
