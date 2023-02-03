@@ -127,7 +127,7 @@ if __name__ == "__main__":
             # find circle
             rows = gray.shape[0]
             circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1,
-                                       minDist=rows / 8, param1=210, param2=37, minRadius=10, maxRadius=150)
+                                       minDist=rows / 8, param1=200, param2=37, minRadius=10, maxRadius=150)
             prev_circle = None
             if circles is not None:
                 circles = np.uint16(np.around(circles))
@@ -178,6 +178,7 @@ if __name__ == "__main__":
                     contours_found.append(
                         {"cnt": cnt, "area": area, "bbox": [x, y, w, h], "center": [cx, cy], "vote": 0})
             contours_found = sorted(contours_found, key=lambda x: x["area"], reverse=True)
+            print('contours found: ', len(contours_found))
             for i in range(3):  # find most voted biggest cnt
                 if i < len(contours_found):
                     if circle_updated and dist(contours_found[i]['center'][0], contours_found[i]['center'][1],
@@ -198,7 +199,8 @@ if __name__ == "__main__":
                         object_cnt = contours_found[i]
             if object_cnt is not None:
                 # print(object_cnt['vote'])
-                cv2.circle(frame, tracking_object, 5, (0, 255, 255), -1)
+                if contours_found:
+                    cv2.circle(frame, tracking_object, 5, (0, 255, 255), -1)
                 tracking_object = object_cnt['center']
 
             # finding centroids of best_cnt and draw a circle there
@@ -217,25 +219,25 @@ if __name__ == "__main__":
                     middle_diff = 160
                 left_bound = middle_x - middle_diff
                 right_bound = middle_x + middle_diff
-                if right_bound < cx:
-                    print("turn_right")
-                elif left_bound > cx:
-                    print('turn left')
-                else:
-                    if object_cnt['area'] < area_threshold:
-                        print('forward')
-                    if object_cnt['area'] > area_threshold + 5000:
-                        print('backward ')
-                    elif area_threshold <= object_cnt['area'] <= area_threshold + 5000:
-                        print('stop')
-            else:
-                print('stop')
+            #     if right_bound < cx:
+            #         print("turn_right")
+            #     elif left_bound > cx:
+            #         print('turn left')
+            #     else:
+            #         if object_cnt['area'] < area_threshold:
+            #             print('forward')
+            #         if object_cnt['area'] > area_threshold + 5000:
+            #             print('backward ')
+            #         elif area_threshold <= object_cnt['area'] <= area_threshold + 5000:
+            #             print('stop')
+            # else:
+            #     print('stop')
 
             # Show the original and processed image
             # res = cv2.bitwise_and(frame, frame, mask=thresh2)
-            cv2.line(frame, (middle_x, 540), (middle_x, 0), (255, 0, 0), thickness=1)
-            cv2.line(frame, (left_bound, 540), (left_bound, 0), (0, 255, 0), thickness=2)
-            cv2.line(frame, (right_bound, 540), (right_bound, 0), (0, 255, 0), thickness=2)
+            # cv2.line(frame, (middle_x, 540), (middle_x, 0), (255, 0, 0), thickness=1)
+            # cv2.line(frame, (left_bound, 540), (left_bound, 0), (0, 255, 0), thickness=2)
+            # cv2.line(frame, (right_bound, 540), (right_bound, 0), (0, 255, 0), thickness=2)
             cv2.imshow('frame', frame)
             cv2.imshow('thresh', thresh2)
 
